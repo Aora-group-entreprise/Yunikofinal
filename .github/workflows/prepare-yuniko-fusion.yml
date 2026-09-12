@@ -1,0 +1,53 @@
+name: Prepare Yusheng + Yuniko fusion
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Yunikofinal
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Recover Yuniko source
+        run: |
+          set -e
+          rm -rf /tmp/yuniko
+          git clone --depth 1 https://github.com/Aora-group-entreprise/Yuniko.git /tmp/yuniko
+          rm -rf yuniko-source
+          mkdir -p yuniko-source
+          rsync -a --exclude='.git' --exclude='.env' /tmp/yuniko/ yuniko-source/
+
+      - name: Preserve Yusheng ZIP and create fusion manifest
+        run: |
+          set -e
+          cat > YUNIKO_FUSION_MANIFEST.md <<'EOF'
+          # Yuniko fusion source
+
+          Yunikofinal uses the Yusheng ZIP as the base. The complete Yuniko source is recovered under `yuniko-source/` for the integration phase.
+
+          Rules for the integration phase:
+          - Yusheng remains the UI/application base.
+          - Yuniko functionality is integrated into that base; it is not a replacement base.
+          - Preserve Feed, Posts, Stories, Live, Likes, Comments, Shares, Friends/Follows, Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security, Yuniko API, PostgreSQL/Drizzle, Supabase Storage and monetization infrastructure.
+          - Do not copy secrets from `.env`.
+          - Do not replace Yuniko's JWT/PostgreSQL/Drizzle/Supabase Storage/Cloudflare stack with another stack.
+          EOF
+
+      - name: Commit recovered Yuniko source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add yuniko-source YUNIKO_FUSION_MANIFEST.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: recover Yuniko source for Yusheng-based fusion'
+          git push origin HEAD:main
