@@ -30,11 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           YUSHENG_ROOT="/tmp/yusheng/yusheng-main"
-          rsync -a --delete \
-            --exclude='.git' \
-            --exclude='.env' \
-            --exclude='yusheng-main (1).zip' \
-            "$YUSHENG_ROOT/" ./
+          rsync -a --delete --exclude='.git' --exclude='.env' --exclude='yusheng-main (1).zip' "$YUSHENG_ROOT/" ./
 
       - name: Fuse Yuniko features into the Yusheng project
         run: |
@@ -42,70 +38,52 @@ jobs:
           rm -rf yuniko-source
           mkdir -p yuniko-source
           rsync -a --exclude='.git' --exclude='.env' /tmp/yuniko/ yuniko-source/
-
-          # Preserve Yuniko's real backend, database and media infrastructure.
           mkdir -p artifacts/api-server artifacts/yuniko lib
           rsync -a --delete yuniko-source/artifacts/api-server/ artifacts/api-server/
           rsync -a --delete yuniko-source/artifacts/yuniko/ artifacts/yuniko/
           if [ -d yuniko-source/lib ]; then rsync -a --delete yuniko-source/lib/ lib/; fi
 
-          # Keep both complete source trees, with explicit namespaces so their
-          # aliases cannot collide. Yusheng remains the stable base tree while
-          # Yuniko becomes the functional application layer being wired into it.
           rm -rf src/yusheng src/yuniko
           cp -a /tmp/yusheng/yusheng-main/src src/yusheng
           cp -a yuniko-source/artifacts/yuniko/src src/yuniko
-
-          # Yusheng source keeps working under its own alias.
           find src/yusheng -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.css' \) -print0 | xargs -0 sed -i 's|@/|@yusheng/|g'
 
-          # The active entry point is a small bridge: it mounts Yuniko's real
-          # application while retaining Yusheng's full source and design system.
           cat > src/App.tsx <<'EOF'
           import YunikoApp from "@/App";
           export default YunikoApp;
           EOF
 
-          cat > src/index.css <<'EOF'
-          @import "@yusheng/index.css";
-          @import "@/index.css";
-          EOF
+          # Use Yusheng's Tailwind 3 stylesheet as the root stylesheet.
+          # Yuniko's Tailwind 4 stylesheet stays isolated in src/yuniko.
+          cp /tmp/yusheng/yusheng-main/src/index.css src/index.css
 
-          # Vite aliases: @ is Yuniko, @yusheng is the Yusheng base.
           python3 - <<'PY'
           from pathlib import Path
           p = Path('vite.config.ts')
           s = p.read_text()
-          old = 'alias: { "@": path.resolve(__dirname, "./src") }'
-          if old in s:
-              s = s.replace(old, 'alias: { "@": path.resolve(__dirname, "./src/yuniko"), "@yusheng": path.resolve(__dirname, "./src/yusheng") }')
-          elif '"@":' in s and '"@yusheng":' not in s:
-              s = s.replace('"@": path.resolve(__dirname, "./src")', '"@": path.resolve(__dirname, "./src/yuniko"), "@yusheng": path.resolve(__dirname, "./src/yusheng")')
+          s = s.replace('"@": path.resolve(__dirname, "./src")', '"@": path.resolve(__dirname, "./src/yuniko"), "@yusheng": path.resolve(__dirname, "./src/yusheng")')
           p.write_text(s)
           PY
 
           cat > YUNIKO_FUSION_MANIFEST.md <<'EOF'
           # Yunikofinal — Yusheng base + Yuniko functional fusion
 
-          Yusheng is retained as the stable base source tree in `src/yusheng`.
+          Yusheng is the stable base source tree in `src/yusheng` and supplies the root UI stylesheet.
           Yuniko is the active functional application layer in `src/yuniko`.
+          Yuniko API/infrastructure is preserved under `artifacts/api-server` and shared packages under `lib`.
 
-          The bridge in `src/App.tsx` mounts Yuniko while both source trees remain
-          available. `@/` resolves to Yuniko and `@yusheng/` resolves to Yusheng,
-          preventing source/import collisions during the fusion.
+          Preserved systems include Feed, Posts, Stories, Live, Likes, Comments, Shares, Friends/Follows,
+          Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security,
+          PostgreSQL/Drizzle, Supabase Storage, Cloudflare and monetization infrastructure.
 
-          Preserved Yuniko systems: Feed, Posts, Stories, Live, Likes, Comments,
-          Shares, Friends/Follows, Notifications, Private Chat, Audio/Video Calls,
-          Profiles, Settings, language support, security, API, PostgreSQL/Drizzle,
-          Supabase Storage, Cloudflare and monetization infrastructure.
-
-          Security: `.env` and credentials are never copied into the repository.
+          `.env` and credentials are never copied into the repository.
           EOF
 
       - name: Validate the fused frontend
         run: |
           set -euo pipefail
-          if [ -f package.json ]; then npm install --no-audit --no-fund; npm run build; fi
+          npm install --no-audit --no-fund wouter react-icons
+          npm run build
 
       - name: Commit fusion state
         run: |
