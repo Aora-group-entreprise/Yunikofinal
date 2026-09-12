@@ -29,17 +29,23 @@ jobs:
           s=s.replace('import BottomNav from "@/components/navigation/BottomNav";', 'import BottomNav from "@/components/YushengBaseNav";')
           p.write_text(s)
           PY
-      - name: Load both base styles
+      - name: Load compatible Yuniko theme styles
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          p=Path('src/main.tsx')
+          p=Path('src/yuniko/index.css')
           s=p.read_text()
-          if './yuniko/index.css' not in s:
-              s=s.replace('import "./index.css";', 'import "./index.css";\nimport "./yuniko/index.css";\nimport "./yuniko/light-mode-fixes.css";\nimport "./yuniko/responsive.css";')
-          p.write_text(s)
+          lines=s.splitlines()
+          while lines and (lines[0].startswith('@import ') or lines[0].startswith('@plugin ')):
+              lines.pop(0)
+          Path('src/yuniko/index.compat.css').write_text('\n'.join(lines) + '\n')
+          m=Path('src/main.tsx')
+          main=m.read_text().replace('import "./yuniko/index.css";', 'import "./yuniko/index.compat.css";')
+          if './yuniko/index.compat.css' not in main:
+              main=main.replace('import "./index.css";', 'import "./index.css";\nimport "./yuniko/index.compat.css";')
+          m.write_text(main)
           PY
       - name: Build fused application
         run: npm install --no-audit --no-fund wouter react-icons && npm run build
@@ -49,7 +55,7 @@ jobs:
           set -e
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/yuniko/pages/home.tsx src/main.tsx src/yuniko/components/YushengBaseNav.tsx
+          git add src/yuniko/pages/home.tsx src/main.tsx src/yuniko/components/YushengBaseNav.tsx src/yuniko/index.compat.css
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "feat: deeply fuse Yusheng base into Yuniko"
+          git commit -m "fix: make fused Yuniko styles compatible with Yusheng build"
           git push
