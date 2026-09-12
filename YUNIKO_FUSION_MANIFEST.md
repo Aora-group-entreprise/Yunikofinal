@@ -1,10 +1,14 @@
-# Yuniko fusion source
+# Yunikofinal — Yusheng base + Yuniko functionality
 
-Yunikofinal uses the Yusheng ZIP as the base. The complete Yuniko source is recovered under `yuniko-source/` for the integration phase.
+Yusheng is the application/UI base. Yuniko is integrated into it; Yuniko is not used as a replacement base.
 
-Rules for the integration phase:
-- Yusheng remains the UI/application base.
-- Yuniko functionality is integrated into that base; it is not a replacement base.
-- Preserve Feed, Posts, Stories, Live, Likes, Comments, Shares, Friends/Follows, Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security, Yuniko API, PostgreSQL/Drizzle, Supabase Storage and monetization infrastructure.
-- Do not copy secrets from `.env`.
-- Do not replace Yuniko's JWT/PostgreSQL/Drizzle/Supabase Storage/Cloudflare stack with another stack.
+Integrated source layers:
+- `src/` — Yusheng application base and responsive UI.
+- `src/yuniko/` — Yuniko frontend feature source being wired into the Yusheng shell/routes.
+- `artifacts/yuniko/` — original Yuniko frontend source retained for complete feature recovery.
+- `artifacts/api-server/` — Yuniko API and infrastructure, including Stories/Live/calls/media support.
+- `lib/` — Yuniko shared API/database packages retained for PostgreSQL/Drizzle integration.
+
+Required preserved functionality: Feed, Posts, Stories, Live, Likes, Comments, Shares, Friends/Follows, Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security, Yuniko API, PostgreSQL/Drizzle, Supabase Storage, Cloudflare and monetization infrastructure.
+
+Security: never copy `.env` or credentials into the repository.
