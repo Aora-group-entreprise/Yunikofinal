@@ -36,11 +36,11 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           p=Path('src/yuniko/index.css')
-          s=p.read_text()
-          lines=s.splitlines()
+          lines=p.read_text().splitlines()
           while lines and (lines[0].startswith('@import ') or lines[0].startswith('@plugin ')):
               lines.pop(0)
-          Path('src/yuniko/index.compat.css').write_text('\n'.join(lines) + '\n')
+          compat='@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n' + '\n'.join(lines) + '\n'
+          Path('src/yuniko/index.compat.css').write_text(compat)
           m=Path('src/main.tsx')
           main=m.read_text().replace('import "./yuniko/index.css";', 'import "./yuniko/index.compat.css";')
           if './yuniko/index.compat.css' not in main:
