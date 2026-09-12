@@ -48,6 +48,10 @@ jobs:
           cp -a yuniko-source/artifacts/yuniko/src src/yuniko
           find src/yusheng -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.css' \) -print0 | xargs -0 sed -i 's|@/|@yusheng/|g'
 
+          # Recover binary assets referenced by Yuniko's @assets alias.
+          mkdir -p attached_assets
+          curl -fsSL "https://raw.githubusercontent.com/Aora-group-entreprise/Yuniko/main/attached_assets/file_000000003524724399ff06d3685a22e6_1780640550687.png" -o attached_assets/file_000000003524724399ff06d3685a22e6_1780640550687.png
+
           cat > src/App.tsx <<'EOF'
           import YunikoApp from "@/App";
           export default YunikoApp;
@@ -62,6 +66,7 @@ jobs:
           p = Path('vite.config.ts')
           s = p.read_text()
           s = s.replace('"@": path.resolve(__dirname, "./src")', '"@": path.resolve(__dirname, "./src/yuniko"), "@yusheng": path.resolve(__dirname, "./src/yusheng")')
+          s = s.replace('alias: {', 'alias: {\n      "@assets": path.resolve(__dirname, "./attached_assets"),', 1)
           p.write_text(s)
           PY
 
@@ -76,6 +81,7 @@ jobs:
           Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security,
           PostgreSQL/Drizzle, Supabase Storage, Cloudflare and monetization infrastructure.
 
+          Binary assets referenced by Yuniko are recovered into `attached_assets` during the fusion build.
           `.env` and credentials are never copied into the repository.
           EOF
 
