@@ -1,0 +1,55 @@
+name: Deep Yusheng + Yuniko Fusion
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fuse:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Integrate Yusheng navigation into Yuniko
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/yuniko/pages/home.tsx
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/yuniko/pages/home.tsx')
+          s=p.read_text()
+          s=s.replace('import BottomNav from "@/components/BottomNav";', 'import BottomNav from "@/components/YushengBaseNav";')
+          s=s.replace('import BottomNav from "../components/BottomNav";', 'import BottomNav from "../components/YushengBaseNav";')
+          s=s.replace('import BottomNav from "@/components/navigation/BottomNav";', 'import BottomNav from "@/components/YushengBaseNav";')
+          p.write_text(s)
+          PY
+      - name: Load both base styles
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/main.tsx')
+          s=p.read_text()
+          if './yuniko/index.css' not in s:
+              s=s.replace('import "./index.css";', 'import "./index.css";\nimport "./yuniko/index.css";\nimport "./yuniko/light-mode-fixes.css";\nimport "./yuniko/responsive.css";')
+          p.write_text(s)
+          PY
+      - name: Build fused application
+        run: npm install --no-audit --no-fund wouter react-icons && npm run build
+      - name: Commit
+        shell: bash
+        run: |
+          set -e
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/yuniko/pages/home.tsx src/main.tsx src/yuniko/components/YushengBaseNav.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat: deeply fuse Yusheng base into Yuniko"
+          git push
