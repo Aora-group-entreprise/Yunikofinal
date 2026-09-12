@@ -4,13 +4,13 @@ import { Search, UserPlus, Globe, ChevronDown, Bookmark, Share2, Flag, EyeOff, W
 import { motion, AnimatePresence } from "framer-motion";
 import StoryAvatar from "@/components/StoryAvatar";
 import PostCard from "@/components/PostCard";
-import BottomNav from "@/components/YushengBaseNav";
+import BottomNav from "@/components/BottomNav";
 import { t } from "@/lib/i18n";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { flattenWorldFeed, useWorldFeed, type WorldFeedPost } from "@/features/feed/useWorldFeed";
 const HEADER_H=56,STORIES_H=78,NAV_H=64,TOP_OFFSET=HEADER_H+STORIES_H,SCROLL_KEY="yuniko_feed_scroll",PENDING_REFRESH_KEY="yuniko_feed_refresh_pending";
-const LIVE_ENABLED=import.meta.env.VITE_LIVE_ENABLED==="true";
+const LIVE_ENABLED=false;
 interface LiveStory{id:number;userId:number;mediaUrl:string;caption:string;authorDisplayName:string;authorUsername:string;authorAvatarUrl:string|null}
 function useOnlineStatus(){const[online,setOnline]=useState(()=>navigator.onLine);useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener("online",on);window.addEventListener("offline",off);return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off)}},[]);return online}
 export default function Home(){const[,setLocation]=useLocation();const{token,user,isLoading:authLoading}=useAuth();const online=useOnlineStatus();const scrollRef=useRef<HTMLDivElement>(null);const[optionsPostId,setOptionsPostId]=useState<number|null>(null);const[worldFeedOpen,setWorldFeedOpen]=useState(false);const[stories,setStories]=useState<LiveStory[]>([]);const[hiddenPostIds,setHiddenPostIds]=useState<Set<number>>(new Set());const{data,isLoading,isFetchingNextPage,fetchNextPage,hasNextPage,refetch,refreshNewPosts,checkNewPosts}=useWorldFeed(user?.id??null);const feed=flattenWorldFeed(data).filter(item=>!hiddenPostIds.has(Number(String(item.post.id).replace("live_",""))));
