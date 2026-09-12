@@ -18,36 +18,65 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Recover Yuniko source
+      - name: Recover sources
         run: |
-          set -e
-          rm -rf /tmp/yuniko
+          set -euo pipefail
+          rm -rf /tmp/yuniko /tmp/yusheng
           git clone --depth 1 https://github.com/Aora-group-entreprise/Yuniko.git /tmp/yuniko
+          mkdir -p /tmp/yusheng
+          unzip -q 'yusheng-main (1).zip' -d /tmp/yusheng
+
+      - name: Make Yusheng the application base
+        run: |
+          set -euo pipefail
+          YUSHENG_ROOT="/tmp/yusheng/yusheng-main"
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='yusheng-main (1).zip' \
+            "$YUSHENG_ROOT/" ./
+
+      - name: Integrate Yuniko functionality without replacing the Yusheng base
+        run: |
+          set -euo pipefail
           rm -rf yuniko-source
           mkdir -p yuniko-source
           rsync -a --exclude='.git' --exclude='.env' /tmp/yuniko/ yuniko-source/
 
-      - name: Preserve Yusheng ZIP and create fusion manifest
-        run: |
-          set -e
+          # Keep Yuniko's production API, DB/infrastructure and frontend feature source
+          # available to the Yusheng-based app. Secrets are deliberately excluded.
+          mkdir -p artifacts/api-server artifacts/yuniko lib
+          rsync -a --delete yuniko-source/artifacts/api-server/ artifacts/api-server/
+          rsync -a --delete yuniko-source/artifacts/yuniko/ artifacts/yuniko/
+          if [ -d yuniko-source/lib ]; then rsync -a --delete yuniko-source/lib/ lib/; fi
+
+          # Copy Yuniko's frontend feature modules into a clearly isolated integration area.
+          mkdir -p src/yuniko
+          rsync -a --delete yuniko-source/artifacts/yuniko/src/ src/yuniko/
+
           cat > YUNIKO_FUSION_MANIFEST.md <<'EOF'
-          # Yuniko fusion source
+          # Yunikofinal — Yusheng base + Yuniko functionality
 
-          Yunikofinal uses the Yusheng ZIP as the base. The complete Yuniko source is recovered under `yuniko-source/` for the integration phase.
+          Yusheng is the application/UI base. Yuniko is integrated into it; Yuniko is not used as a replacement base.
 
-          Rules for the integration phase:
-          - Yusheng remains the UI/application base.
-          - Yuniko functionality is integrated into that base; it is not a replacement base.
-          - Preserve Feed, Posts, Stories, Live, Likes, Comments, Shares, Friends/Follows, Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security, Yuniko API, PostgreSQL/Drizzle, Supabase Storage and monetization infrastructure.
-          - Do not copy secrets from `.env`.
-          - Do not replace Yuniko's JWT/PostgreSQL/Drizzle/Supabase Storage/Cloudflare stack with another stack.
+          Integrated source layers:
+          - `src/` — Yusheng application base and responsive UI.
+          - `src/yuniko/` — Yuniko frontend feature source being wired into the Yusheng shell/routes.
+          - `artifacts/yuniko/` — original Yuniko frontend source retained for complete feature recovery.
+          - `artifacts/api-server/` — Yuniko API and infrastructure, including Stories/Live/calls/media support.
+          - `lib/` — Yuniko shared API/database packages retained for PostgreSQL/Drizzle integration.
+
+          Required preserved functionality: Feed, Posts, Stories, Live, Likes, Comments, Shares, Friends/Follows, Notifications, Private Chat, Audio/Video Calls, Profiles, Settings, language support, security, Yuniko API, PostgreSQL/Drizzle, Supabase Storage, Cloudflare and monetization infrastructure.
+
+          Security: never copy `.env` or credentials into the repository.
           EOF
 
-      - name: Commit recovered Yuniko source
+      - name: Commit fusion state
         run: |
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add yuniko-source YUNIKO_FUSION_MANIFEST.md
+          git add -A
           git diff --cached --quiet && exit 0
-          git commit -m 'chore: recover Yuniko source for Yusheng-based fusion'
+          git commit -m 'feat: establish Yusheng-based Yuniko fusion'
           git push origin HEAD:main
