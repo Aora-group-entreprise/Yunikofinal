@@ -4,7 +4,7 @@ import { Search, UserPlus, Globe, ChevronDown, Bookmark, Share2, Flag, EyeOff, W
 import { motion, AnimatePresence } from "framer-motion";
 import StoryAvatar from "@/components/StoryAvatar";
 import PostCard from "@/components/PostCard";
-import BottomNav from "@/components/BottomNav";
+import BottomNav from "@/components/YushengBaseNav";
 import { t } from "@/lib/i18n";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
