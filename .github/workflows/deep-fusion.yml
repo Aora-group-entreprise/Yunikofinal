@@ -1,34 +1,40 @@
 name: Deep Yusheng + Yuniko Fusion
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   fuse:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - name: Integrate Yusheng navigation into Yuniko
+
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Verify Yuniko navigation is preserved
         shell: bash
         run: |
           set -euo pipefail
           test -f src/yuniko/pages/home.tsx
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('src/yuniko/pages/home.tsx')
-          s=p.read_text()
-          s=s.replace('import BottomNav from "@/components/BottomNav";', 'import BottomNav from "@/components/YushengBaseNav";')
-          s=s.replace('import BottomNav from "../components/BottomNav";', 'import BottomNav from "../components/YushengBaseNav";')
-          s=s.replace('import BottomNav from "@/components/navigation/BottomNav";', 'import BottomNav from "@/components/YushengBaseNav";')
-          p.write_text(s)
-          PY
+          grep -q 'components/BottomNav' src/yuniko/pages/home.tsx
+
       - name: Load compatible Yuniko theme styles
         shell: bash
         run: |
@@ -47,15 +53,17 @@ jobs:
               main=main.replace('import "./index.css";', 'import "./index.css";\nimport "./yuniko/index.compat.css";')
           m.write_text(main)
           PY
+
       - name: Build fused application
-        run: npm install --no-audit --no-fund wouter react-icons && npm run build
-      - name: Commit
+        run: pnpm run build
+
+      - name: Commit generated compatibility changes
         shell: bash
         run: |
           set -e
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/yuniko/pages/home.tsx src/main.tsx src/yuniko/components/YushengBaseNav.tsx src/yuniko/index.compat.css
+          git add src/main.tsx src/yuniko/index.compat.css
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "fix: make fused Yuniko styles compatible with Yusheng build"
+          git commit -m "fix: generate Yuniko compatible theme styles"
           git push
