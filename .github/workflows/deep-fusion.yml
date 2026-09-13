@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  fuse:
+  build:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -28,42 +28,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile=false
 
-      - name: Verify Yuniko navigation is preserved
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f src/yuniko/pages/home.tsx
-          grep -q 'components/BottomNav' src/yuniko/pages/home.tsx
-
-      - name: Load compatible Yuniko theme styles
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('src/yuniko/index.css')
-          lines=p.read_text().splitlines()
-          while lines and (lines[0].startswith('@import ') or lines[0].startswith('@plugin ')):
-              lines.pop(0)
-          compat='@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n' + '\n'.join(lines) + '\n'
-          Path('src/yuniko/index.compat.css').write_text(compat)
-          m=Path('src/main.tsx')
-          main=m.read_text().replace('import "./yuniko/index.css";', 'import "./yuniko/index.compat.css";')
-          if './yuniko/index.compat.css' not in main:
-              main=main.replace('import "./index.css";', 'import "./index.css";\nimport "./yuniko/index.compat.css";')
-          m.write_text(main)
-          PY
-
-      - name: Build fused application
+      - name: Build Yuniko
         run: pnpm run build
-
-      - name: Commit generated compatibility changes
-        shell: bash
-        run: |
-          set -e
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/main.tsx src/yuniko/index.compat.css
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "fix: generate Yuniko compatible theme styles"
-          git push
