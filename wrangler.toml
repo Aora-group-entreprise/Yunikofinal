@@ -5,3 +5,18 @@
 name = "yunikofinal"
 pages_build_output_dir = "artifacts/yuniko/dist/public"
 compatibility_date = "2026-09-04"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NODE_ENV = "production"
+CORS_ORIGINS = "https://yunikofinal.pages.dev"
+SUPABASE_URL = "https://pqjrmtkfgwoocbvmwbby.supabase.co"
+SUPABASE_MEDIA_BUCKET = "media"
+VIDEO_ENABLED = "false"
+LIVE_ENABLED = "false"
+SFU_ENABLED = "false"
+LIVE_RECORDING_ENABLED = "false"
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "bf18a09e49314ceb9f76879895e7e67d"
